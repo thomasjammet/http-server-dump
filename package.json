@@ -1,0 +1,16 @@
+{
+  "name": "http-server-dump",
+  "version": "1.0.0",
+  "description": "Dump HTTP POST into files",
+  "main": "http-server-dump.js",
+  "type": "module",
+  "scripts": {
+    "start": "node http-server-dump.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ceeblue B.V.",
+  "license": "MIT",
+  "devDependencies": {
+    "mime-types": "^2.1.35"
+  }
+}
