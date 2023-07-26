@@ -11,6 +11,7 @@
   "author": "Ceeblue B.V.",
   "license": "MIT",
   "devDependencies": {
-    "mime-types": "^2.1.35"
+    "mime-types": "^2.1.35",
+    "yargs": "^16.2.0"
   }
 }

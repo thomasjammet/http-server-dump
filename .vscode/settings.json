@@ -1,0 +1,9 @@
+{
+    "sync-rsync.flags": "-a",
+    "sync-rsync.remote": "ceeadmin@nl-ams-35-scte.live.ceeblue.tv:/home/ceeadmin/sources/thomas/http-server-dump",
+    "sync-rsync.exclude": [
+        ".git",
+        ".vscode",
+        "node_modules"
+    ]
+}
