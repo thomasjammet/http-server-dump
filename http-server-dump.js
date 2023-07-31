@@ -51,6 +51,8 @@ function humanFileSize(size) {
     return (size / Math.pow(1024, i)).toFixed(2) * 1 + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
 }
 
+const mapFiles = new Map();
+
 async function onRequest(request, response) {
 	// make case insensible
 	const url = new URL((request.socket.ssl? "https://" : "http://") + request.client.remoteAddress + ':' + request.client.remotePort + request.url);
@@ -64,12 +66,35 @@ async function onRequest(request, response) {
 		response.setHeader('access-control-allow-origin', request.headers.origin || '*');
 		
 		switch(request.method.toUpperCase()) {
+			case 'GET': {
+				if (name === "close") { // close the socket pointed by fileName
+					// Close the socket pointed by query string option fileName
+					const fileName = url.searchParams.get("fileName");
+					if (!fileName) {
+						throw Ex(400, 'File name is missing (cannot be empty)');
+					}
+					const file = mapFiles.get(fileName);
+					if (!file) {
+						throw Ex(404, 'File', fileName, 'not found');
+					}
+					console.info("Closing file", fileName, "and its socket...");
+					file.request.socket.destroy();
+					file.request.closeFile(fileName, file.request, file.response);
+					response.end();
+				} else {
+					throw Ex(400, 'Method', name, 'not found');
+				}
+				break;
+			}
 			case 'POST': {
 				// determine the input format (can throw an exception)
                 let contentType = request.headers['content-type'];
 				ext = contentType ? mime.extension(contentType) : ext;
-				if(!name)
+				if (!name) {
 					throw Ex(400, 'File name is missing (cannot be empty)');
+				} else if (mapFiles.has(name)) {
+					throw Ex(409, 'File', name, 'already in use');
+				}
 
                 console.info("Starting to write to file", name, "...");
 
@@ -86,18 +111,27 @@ async function onRequest(request, response) {
 					request.bytesReceived += chunk.byteLength;
                 });
 				request.logBytes = setInterval(function() {
-					console.log(name, "bytes written :", humanFileSize(request.bytesReceived), ", diff :", humanFileSize(request.bytesReceived-request.lastBytesReceived), "maxTime:", request.maxTime, "ms");
+					console.log(name, "bytes written :", humanFileSize(request.bytesReceived), ", diff :", humanFileSize(request.bytesReceived-request.lastBytesReceived), "maxTime:", request.maxTime, "ms", "status : ", request.socket.destroyed);
 					request.lastBytesReceived = request.bytesReceived;
 				}, 1000);
 				request.on("end", function () {
-					console.info(name, "closed, elapsed :", time()-request.start, "ms, max time without data :", request.maxTime, "ms");
-					response.end("OK");
-					clearInterval(request.logBytes);
-					request.logBytes = null;
+					request.closeFile(name, request, response);
 				});
+				request.on("error", function (event) {
+					console.warn(name, "socket error :", event);
+					request.closeFile(name, request, response);
+				});
+				request.closeFile = function(fileName, fileRequest, fileResponse) {
+					console.info(fileName, "closed, elapsed :", time()-fileRequest.start, "ms, max time without data :", fileRequest.maxTime, "ms");
+					fileResponse.end("OK");
+					clearInterval(fileRequest.logBytes);
+					fileRequest.logBytes = null;
+					mapFiles.delete(fileName);
+				}
 				if (!argv.noDump) {
 					request.pipe(stream);
 				}
+				mapFiles.set(name, {stream, request, response});
 				break;
 			}
 			default:
