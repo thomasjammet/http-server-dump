@@ -57,6 +57,7 @@ async function onRequest(request, response) {
 	// make case insensible
 	const url = new URL((request.socket.ssl? "https://" : "http://") + request.client.remoteAddress + ':' + request.client.remotePort + request.url);
 	console.log(request.method, url.toString());
+	console.log("Headers:", request.headers);
 	const name = path.basename(url.pathname);
     let ext = path.extname(url.pathname);
 
@@ -111,7 +112,7 @@ async function onRequest(request, response) {
 					request.bytesReceived += chunk.byteLength;
                 });
 				request.logBytes = setInterval(function() {
-					console.log(name, "bytes written :", humanFileSize(request.bytesReceived), ", diff :", humanFileSize(request.bytesReceived-request.lastBytesReceived), "maxTime:", request.maxTime, "ms", "status : ", request.socket.destroyed);
+					console.log(name, "bytes written :", humanFileSize(request.bytesReceived), ", diff :", humanFileSize(request.bytesReceived-request.lastBytesReceived), "maxTime:", request.maxTime, "ms");
 					request.lastBytesReceived = request.bytesReceived;
 				}, 1000);
 				request.on("end", function () {
